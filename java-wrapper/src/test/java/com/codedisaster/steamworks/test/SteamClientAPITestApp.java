@@ -80,15 +80,24 @@ public class SteamClientAPITestApp extends SteamTestApp {
 			System.out.println("Leaderboard scores downloaded: handle=" + leaderboard.toString() +
 					", entries=" + entries.toString() + ", count=" + numEntries);
 
+			int[] details = new int[16];
+
 			for (int i = 0; i < numEntries; i++) {
 
 				SteamLeaderboardEntry entry = new SteamLeaderboardEntry();
-				if (userStats.getDownloadedLeaderboardEntry(entries, i, entry)) {
+				if (userStats.getDownloadedLeaderboardEntry(entries, i, entry, details)) {
+
+					int numDetails = entry.getNumDetails();
 
 					System.out.println("Leaderboard entry #" + i +
 							": steamIDUser=" + entry.getSteamIDUser().getAccountID() +
 							", globalRank=" + entry.getGlobalRank() +
-							", score=" + entry.getScore());
+							", score=" + entry.getScore() +
+							", numDetails=" + numDetails);
+
+					for (int detail = 0; detail < numDetails; detail++) {
+						System.out.println("  ... detail #" + detail + "=" + details[detail]);
+					}
 
 					if (friends.requestUserInformation(entry.getSteamIDUser(), false)) {
 						System.out.println("  ... requested user information for entry");
@@ -154,6 +163,11 @@ public class SteamClientAPITestApp extends SteamTestApp {
 					", globalRankNew=" + globalRankNew +
 					", globalRankPrevious=" + globalRankPrevious);
 		}
+
+		@Override
+		public void onGlobalStatsReceived(long gameId, SteamResult result) {
+			System.out.println("Global stats received: gameId=" + gameId + ", result=" + result.toString());
+		}
 	};
 
 	private SteamRemoteStorageCallback remoteStorageCallback = new SteamRemoteStorageCallback() {
@@ -203,15 +217,7 @@ public class SteamClientAPITestApp extends SteamTestApp {
 			for (int i = 0; i < numResultsReturned; i++) {
 				SteamUGCDetails details = new SteamUGCDetails();
 				ugc.getQueryUGCResult(query, i, details);
-
-				System.out.println("UGC details #" + i +
-								   ": publishedFileID=" + details.getPublishedFileID().toString() +
-								   ", result=" + details.getResult().toString() +
-								   ", title='" + details.getTitle() + "'" +
-								   ", description='" + details.getDescription() + "'" +
-								   ", fileName=" + details.getFileName() +
-								   ", fileHandle=" + details.getFileHandle().toString() +
-								   ", previewFileHandle=" + details.getPreviewFileHandle().toString());
+				printUGCDetails("UGC details #" + i, details);
 			}
 
 			ugc.releaseQueryUserUGCRequest(query);
@@ -230,14 +236,51 @@ public class SteamClientAPITestApp extends SteamTestApp {
 		@Override
 		public void onRequestUGCDetails(SteamUGCDetails details, SteamResult result) {
 			System.out.println("Request details result: result=" + result);
-			System.out.println("UGC details " +
-					   ": publishedFileID=" + details.getPublishedFileID().toString() +
-					   ", result=" + details.getResult().toString() +
-					   ", title='" + details.getTitle() + "'" +
-					   ", description='" + details.getDescription() + "'" +
-					   ", fileName=" + details.getFileName() +
-					   ", fileHandle=" + details.getFileHandle().toString() +
-					   ", previewFileHandle=" + details.getPreviewFileHandle().toString());
+			printUGCDetails("UGC details ", details);
+		}
+
+		@Override
+		public void onCreateItem(SteamPublishedFileID publishedFileID, boolean needsToAcceptWLA, SteamResult result) {
+
+		}
+
+		@Override
+		public void onSubmitItemUpdate(boolean needsToAcceptWLA, SteamResult result) {
+
+		}
+
+		@Override
+		public void onDownloadItemResult(long appID, SteamPublishedFileID publishedFileID, SteamResult result) {
+
+		}
+
+		@Override
+		public void onUserFavoriteItemsListChanged(SteamPublishedFileID publishedFileID, boolean wasAddRequest, SteamResult result) {
+
+		}
+
+		@Override
+		public void onSetUserItemVote(SteamPublishedFileID publishedFileID, boolean voteUp, SteamResult result) {
+
+		}
+
+		@Override
+		public void onGetUserItemVote(SteamPublishedFileID publishedFileID, boolean votedUp, boolean votedDown, boolean voteSkipped, SteamResult result) {
+
+		}
+
+		private void printUGCDetails(String prefix, SteamUGCDetails details) {
+			System.out.println(prefix +
+					": publishedFileID=" + details.getPublishedFileID().toString() +
+					", result=" + details.getResult().name() +
+					", type=" + details.getFileType().name() +
+					", title='" + details.getTitle() + "'" +
+					", description='" + details.getDescription() + "'" +
+					", tags='" + details.getTags() + "'" +
+					", fileName=" + details.getFileName() +
+					", fileHandle=" + details.getFileHandle().toString() +
+					", previewFileHandle=" + details.getPreviewFileHandle().toString() +
+					", url=" + details.getURL());
 		}
 	};
 
@@ -277,6 +320,13 @@ public class SteamClientAPITestApp extends SteamTestApp {
 		}
 	};
 
+	private SteamUtilsCallback utilsCallback = new SteamUtilsCallback() {
+		@Override
+		public void onSteamShutdown() {
+			System.out.println("Steam client wants to shut down!");
+		}
+	};
+
 	@Override
 	protected void registerInterfaces() {
 
@@ -293,7 +343,7 @@ public class SteamClientAPITestApp extends SteamTestApp {
 		ugc = new SteamUGC(ugcCallback);
 
 		System.out.println("Register Utils ...");
-		utils = new SteamUtils();
+		utils = new SteamUtils(utilsCallback);
 
 		System.out.println("Register Apps ...");
 		apps = new SteamApps();
@@ -302,6 +352,7 @@ public class SteamClientAPITestApp extends SteamTestApp {
 		friends = new SteamFriends(friendsCallback);
 
 		System.out.println("Local user account ID: " + user.getSteamID().getAccountID());
+		System.out.println("Local user friends name: " + friends.getPersonaName());
 		System.out.println("App ID: " + utils.getAppID());
 
 		System.out.println("App build ID: " + apps.getAppBuildId());
@@ -330,7 +381,52 @@ public class SteamClientAPITestApp extends SteamTestApp {
 	@Override
 	protected void processInput(String input) throws SteamException {
 
-		if (input.equals("stats request")) {
+		if (input.startsWith("stats global ")) {
+			String[] cmd = input.substring("stats global ".length()).split(" ");
+			if (cmd.length > 0) {
+				if (cmd[0].equals("request")) {
+					int days = 0;
+					if (cmd.length > 1) {
+						days = Integer.parseInt(cmd[1]);
+					}
+					userStats.requestGlobalStats(days);
+				} else if (cmd[0].equals("lget") && cmd.length > 1) {
+					int days = 0;
+					if (cmd.length > 2) {
+						days = Integer.parseInt(cmd[2]);
+					}
+					if (days == 0) {
+						long value = userStats.getGlobalStat(cmd[1], -1);
+						System.out.println("global stat (L) '" + cmd[1] + "' = " + value);
+					} else {
+						long[] data = new long[days];
+						int count = userStats.getGlobalStatHistory(cmd[1], data);
+						System.out.print("global stat history (L) for " + count + " of " + days + " days:");
+						for (int i = 0; i < count; i++) {
+							System.out.print(" " + Long.toString(data[i]));
+						}
+						System.out.println();
+					}
+				} else if (cmd[0].equals("dget") && cmd.length > 1) {
+					int days = 0;
+					if (cmd.length > 2) {
+						days = Integer.parseInt(cmd[2]);
+					}
+					if (days == 0) {
+						double value = userStats.getGlobalStat(cmd[1], -1.0);
+						System.out.println("global stat (D) '" + cmd[1] + "' = " + value);
+					} else {
+						double[] data = new double[days];
+						int count = userStats.getGlobalStatHistory(cmd[1], data);
+						System.out.print("global stat history (D) for " + count + " of " + days + " days:");
+						for (int i = 0; i < count; i++) {
+							System.out.print(" " + Double.toString(data[i]));
+						}
+						System.out.println();
+					}
+				}
+			}
+		} else if (input.equals("stats request")) {
 			userStats.requestCurrentStats();
 		} else if (input.equals("stats store")) {
 			userStats.storeStats();
@@ -467,7 +563,7 @@ public class SteamClientAPITestApp extends SteamTestApp {
 			if (currentLeaderboard != null) {
 				System.out.println("uploading score " + score + " to leaderboard " + currentLeaderboard.toString());
 				userStats.uploadLeaderboardScore(currentLeaderboard,
-						SteamUserStats.LeaderboardUploadScoreMethod.KeepBest, Integer.valueOf(score));
+						SteamUserStats.LeaderboardUploadScoreMethod.KeepBest, Integer.valueOf(score), new int[] {});
 			}
 		} else if (input.startsWith("apps subscribed ")) {
 			String appId = input.substring("apps subscribed ".length());

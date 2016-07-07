@@ -35,6 +35,7 @@ public class SteamFriends extends SteamInterface {
 		Ignored(0x200),
 		IgnoredFriend(0x400),
 		Suggested(0x800),
+		ChatMember(0x1000),
 		All(0xFFFF);
 
 		private final int bits;
@@ -143,7 +144,7 @@ public class SteamFriends extends SteamInterface {
 	*/
 
 	static private native long createCallback(SteamFriendsCallbackAdapter javaCallback); /*
-		return (long) new SteamFriendsCallback(env, javaCallback);
+		return (intp) new SteamFriendsCallback(env, javaCallback);
 	*/
 
 	static private native String getPersonaName(long pointer); /*

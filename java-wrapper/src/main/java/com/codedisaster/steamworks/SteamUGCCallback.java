@@ -11,4 +11,18 @@ public interface SteamUGCCallback {
 	
 	void onRequestUGCDetails(SteamUGCDetails details, SteamResult result);
 
+	void onCreateItem(SteamPublishedFileID publishedFileID, boolean needsToAcceptWLA, SteamResult result);
+
+	void onSubmitItemUpdate(boolean needsToAcceptWLA, SteamResult result);
+
+	void onDownloadItemResult(long appID, SteamPublishedFileID publishedFileID, SteamResult result);
+
+	void onUserFavoriteItemsListChanged(SteamPublishedFileID publishedFileID,
+										boolean wasAddRequest, SteamResult result);
+
+	void onSetUserItemVote(SteamPublishedFileID publishedFileID, boolean voteUp, SteamResult result);
+
+	void onGetUserItemVote(SteamPublishedFileID publishedFileID, boolean votedUp,
+						   boolean votedDown, boolean voteSkipped, SteamResult result);
+
 }

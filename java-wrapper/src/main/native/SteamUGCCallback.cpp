@@ -1,7 +1,8 @@
 #include "SteamUGCCallback.h"
 
 SteamUGCCallback::SteamUGCCallback(JNIEnv* env, jobject callback)
-	: SteamCallbackAdapter(env, callback) {
+	: SteamCallbackAdapter(env, callback)
+	, m_CallbackDownloadItemResult(this, &SteamUGCCallback::onDownloadItemResult) {
 
 }
 
@@ -41,3 +42,45 @@ void SteamUGCCallback::onRequestUGCDetails(SteamUGCRequestUGCDetailsResult_t* ca
 	});
 }
 
+void SteamUGCCallback::onCreateItem(CreateItemResult_t* callback, bool error) {
+	invokeCallback({
+		callVoidMethod(env, "onCreateItem", "(JZI)V", (jlong) callback->m_nPublishedFileId,
+		    (jboolean) callback->m_bUserNeedsToAcceptWorkshopLegalAgreement, (jint) callback->m_eResult);
+	});
+}
+
+void SteamUGCCallback::onSubmitItemUpdate(SubmitItemUpdateResult_t* callback, bool error) {
+	invokeCallback({
+		callVoidMethod(env, "onSubmitItemUpdate", "(ZI)V",
+		    (jboolean) callback->m_bUserNeedsToAcceptWorkshopLegalAgreement, (jint) callback->m_eResult);
+	});
+}
+
+void SteamUGCCallback::onDownloadItemResult(DownloadItemResult_t* callback) {
+	invokeCallback({
+		callVoidMethod(env, "onDownloadItemResult", "(JJI)V", (jlong) callback->m_unAppID,
+		    (jlong) callback->m_nPublishedFileId, (jint) callback->m_eResult);
+	});
+}
+
+void SteamUGCCallback::onUserFavoriteItemsListChanged(UserFavoriteItemsListChanged_t* callback, bool error) {
+	invokeCallback({
+		callVoidMethod(env, "onUserFavoriteItemsListChanged", "(JZI)V", (jlong) callback->m_nPublishedFileId,
+		    (jboolean) callback->m_bWasAddRequest, (jint) callback->m_eResult);
+	});
+}
+
+void SteamUGCCallback::onSetUserItemVote(SetUserItemVoteResult_t* callback, bool error) {
+	invokeCallback({
+		callVoidMethod(env, "onSetUserItemVote", "(JZI)V", (jlong) callback->m_nPublishedFileId,
+		    (jboolean) callback->m_bVoteUp, (jint) callback->m_eResult);
+	});
+}
+
+void SteamUGCCallback::onGetUserItemVote(GetUserItemVoteResult_t* callback, bool error) {
+	invokeCallback({
+		callVoidMethod(env, "onGetUserItemVote", "(JZZZI)V", (jlong) callback->m_nPublishedFileId,
+		    (jboolean) callback->m_bVotedUp, (jboolean) callback->m_bVotedDown,
+		    (jboolean) callback->m_bVoteSkipped, (jint) callback->m_eResult);
+	});
+}

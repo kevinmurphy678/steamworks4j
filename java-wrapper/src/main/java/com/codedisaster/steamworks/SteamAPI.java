@@ -1,19 +1,20 @@
 package com.codedisaster.steamworks;
 
+import java.io.PrintStream;
+
 public class SteamAPI {
 
 	static private boolean isRunning = false;
 
-	static public boolean init() {
+	static public boolean init() throws SteamException {
 		return init(null);
 	}
 
-	static public boolean init(String pathToNativeLibraries) {
-		boolean fromJar = pathToNativeLibraries == null || pathToNativeLibraries.endsWith(".jar");
+	static public boolean init(String libraryPath) throws SteamException {
 
-		isRunning = SteamSharedLibraryLoader.extractAndLoadLibraries(fromJar, pathToNativeLibraries);
+		SteamSharedLibraryLoader.loadLibraries(libraryPath);
 
-		isRunning = isRunning && nativeInit();
+		isRunning = nativeInit();
 
 		return isRunning;
 	}
@@ -25,6 +26,16 @@ public class SteamAPI {
 
 	static public boolean isSteamRunning() {
 		return isRunning && isSteamRunningNative();
+	}
+
+	public static void printDebugInfo(PrintStream stream) {
+		if (SteamSharedLibraryLoader.alreadyLoaded) {
+			stream.println("  shared libraries loaded from: " + SteamSharedLibraryLoader.librarySystemPath);
+		} else {
+			stream.println("  shared libraries not loaded");
+		}
+		stream.println("  Steam API initialized: " + isRunning);
+		stream.println("  Steam client active: " + isSteamRunning());
 	}
 
 	// @off
@@ -60,43 +71,43 @@ public class SteamAPI {
 	*/
 
 	static native long getSteamAppsPointer(); /*
-		return (long) SteamApps();
+		return (intp) SteamApps();
 	*/
 
 	static native long getSteamFriendsPointer(); /*
-		return (long) SteamFriends();
+		return (intp) SteamFriends();
 	*/
 
 	static native long getSteamMatchmakingPointer(); /*
-		return (long) SteamMatchmaking();
+		return (intp) SteamMatchmaking();
 	*/
 
 	static native long getSteamNetworkingPointer(); /*
-		return (long) SteamNetworking();
+		return (intp) SteamNetworking();
 	*/
 
 	static native long getSteamRemoteStoragePointer(); /*
-		return (long) SteamRemoteStorage();
+		return (intp) SteamRemoteStorage();
 	*/
 
 	static native long getSteamHTTPPointer(); /*
-		return (long) SteamHTTP();
+		return (intp) SteamHTTP();
 	*/
 
 	static native long getSteamUGCPointer(); /*
-		return (long) SteamUGC();
+		return (intp) SteamUGC();
 	*/
 
 	static native long getSteamUserPointer(); /*
-		return (long) SteamUser();
+		return (intp) SteamUser();
 	*/
 
 	static native long getSteamUserStatsPointer(); /*
-		return (long) SteamUserStats();
+		return (intp) SteamUserStats();
 	*/
 
 	static native long getSteamUtilsPointer(); /*
-		return (long) SteamUtils();
+		return (intp) SteamUtils();
 	*/
 
 }

@@ -133,17 +133,56 @@ public class SteamUserStats extends SteamInterface {
 				leaderboardDataRequest.ordinal(), rangeStart, rangeEnd));
 	}
 
+	/**
+	 * @param details The array size denotes the maximum number of details returned.
+	 *                Check {@link SteamLeaderboardEntry#getNumDetails()} for the actual count. Can be null.
+	 */
 	public boolean getDownloadedLeaderboardEntry(SteamLeaderboardEntriesHandle leaderboardEntries,
-												 int index, SteamLeaderboardEntry entry) {
+												 int index, SteamLeaderboardEntry entry, int[] details) {
 
-		return getDownloadedLeaderboardEntry(pointer, leaderboardEntries.handle, index, entry);
+		return details == null
+				? getDownloadedLeaderboardEntry(pointer, leaderboardEntries.handle, index, entry)
+				: getDownloadedLeaderboardEntry(pointer, leaderboardEntries.handle, index, entry, details, details.length);
 	}
 
+	/**
+	 * @param scoreDetails Can be null.
+	 */
 	public SteamAPICall uploadLeaderboardScore(SteamLeaderboardHandle leaderboard,
 											   LeaderboardUploadScoreMethod method,
-											   int score) {
+											   int score, int[] scoreDetails) {
 
-		return new SteamAPICall(uploadLeaderboardScore(pointer, callback, leaderboard.handle, method.ordinal(), score));
+		return new SteamAPICall(scoreDetails == null
+				? uploadLeaderboardScore(pointer, callback, leaderboard.handle, method.ordinal(), score)
+				: uploadLeaderboardScore(pointer, callback, leaderboard.handle, method.ordinal(), score, scoreDetails, scoreDetails.length));
+	}
+
+	public SteamAPICall requestGlobalStats(int historyDays) {
+		return new SteamAPICall(requestGlobalStats(pointer, callback, historyDays));
+	}
+
+	public long getGlobalStat(String name, long defaultValue) {
+		long[] values = new long[1];
+		if (getGlobalStat(pointer, name, values)) {
+			return values[0];
+		}
+		return defaultValue;
+	}
+
+	public double getGlobalStat(String name, double defaultValue) {
+		double[] values = new double[1];
+		if (getGlobalStat(pointer, name, values)) {
+			return values[0];
+		}
+		return defaultValue;
+	}
+
+	public int getGlobalStatHistory(String name, long[] data) {
+		return getGlobalStatHistory(pointer, name, data, data.length);
+	}
+
+	public int getGlobalStatHistory(String name, double[] data) {
+		return getGlobalStatHistory(pointer, name, data, data.length);
 	}
 
 	// @off
@@ -154,7 +193,7 @@ public class SteamUserStats extends SteamInterface {
 	*/
 
 	static private native long createCallback(SteamUserStatsCallbackAdapter javaCallback); /*
-		return (long) new SteamUserStatsCallback(env, javaCallback);
+		return (intp) new SteamUserStatsCallback(env, javaCallback);
 	*/
 
 	static private native boolean requestCurrentStats(long pointer); /*
@@ -279,6 +318,35 @@ public class SteamUserStats extends SteamInterface {
 	*/
 
 	static private native boolean getDownloadedLeaderboardEntry(long pointer, long entries, int index,
+																SteamLeaderboardEntry entry,
+																int[] details, int detailsMax); /*
+
+		ISteamUserStats* stats = (ISteamUserStats*) pointer;
+		LeaderboardEntry_t result;
+
+		if (stats->GetDownloadedLeaderboardEntry(entries, index, &result, details, detailsMax)) {
+			jclass clazz = env->GetObjectClass(entry);
+
+			jfieldID field = env->GetFieldID(clazz, "steamIDUser", "J");
+			env->SetLongField(entry, field, (jlong) result.m_steamIDUser.ConvertToUint64());
+
+			field = env->GetFieldID(clazz, "globalRank", "I");
+			env->SetIntField(entry, field, (jint) result.m_nGlobalRank);
+
+			field = env->GetFieldID(clazz, "score", "I");
+			env->SetIntField(entry, field, (jint) result.m_nScore);
+
+			field = env->GetFieldID(clazz, "details", "I");
+			env->SetIntField(entry, field, (jint) result.m_cDetails);
+
+			return true;
+		}
+
+		return false;
+
+	*/
+
+	static private native boolean getDownloadedLeaderboardEntry(long pointer, long entries, int index,
 																SteamLeaderboardEntry entry); /*
 
 		ISteamUserStats* stats = (ISteamUserStats*) pointer;
@@ -294,13 +362,32 @@ public class SteamUserStats extends SteamInterface {
 			env->SetIntField(entry, field, (jint) result.m_nGlobalRank);
 
 			field = env->GetFieldID(clazz, "score", "I");
-			env->SetLongField(entry, field, (jint) result.m_nScore);
+			env->SetIntField(entry, field, (jint) result.m_nScore);
+
+			field = env->GetFieldID(clazz, "details", "I");
+			env->SetIntField(entry, field, (jint) result.m_cDetails);
 
 			return true;
 		}
 
 		return false;
 
+	*/
+
+	static private native long uploadLeaderboardScore(long pointer, long callback,
+													  long leaderboard, int method, int score,
+													  int[] scoreDetails, int scoreDetailsCount); /*
+
+		ISteamUserStats* stats = (ISteamUserStats*) pointer;
+		SteamUserStatsCallback* cb = (SteamUserStatsCallback*) callback;
+
+		SteamAPICall_t handle = stats->UploadLeaderboardScore(leaderboard,
+			(ELeaderboardUploadScoreMethod) method, score, scoreDetails, scoreDetailsCount);
+
+		cb->onLeaderboardScoreUploadedCall.Set(handle, cb,
+			&SteamUserStatsCallback::onLeaderboardScoreUploaded);
+
+		return handle;
 	*/
 
 	static private native long uploadLeaderboardScore(long pointer, long callback,
@@ -316,6 +403,37 @@ public class SteamUserStats extends SteamInterface {
 			&SteamUserStatsCallback::onLeaderboardScoreUploaded);
 
 		return handle;
+	*/
+
+	static private native long requestGlobalStats(long pointer, long callback, int historyDays); /*
+		ISteamUserStats* stats = (ISteamUserStats*) pointer;
+		SteamUserStatsCallback* cb = (SteamUserStatsCallback*) callback;
+
+		SteamAPICall_t handle = stats->RequestGlobalStats(historyDays);
+
+		cb->onGlobalStatsReceivedCall.Set(handle, cb, &SteamUserStatsCallback::onGlobalStatsReceived);
+
+		return handle;
+	*/
+
+	static private native boolean getGlobalStat(long pointer, String name, long[] value); /*
+		ISteamUserStats* stats = (ISteamUserStats*) pointer;
+		return stats->GetGlobalStat(name, &((int64*) value)[0]);
+	*/
+
+	static private native boolean getGlobalStat(long pointer, String name, double[] value); /*
+		ISteamUserStats* stats = (ISteamUserStats*) pointer;
+		return stats->GetGlobalStat(name, &value[0]);
+	*/
+
+	static private native int getGlobalStatHistory(long pointer, String name, long[] values, int count); /*
+		ISteamUserStats* stats = (ISteamUserStats*) pointer;
+		return stats->GetGlobalStatHistory(name, values, count * sizeof(int64));
+	*/
+
+	static private native int getGlobalStatHistory(long pointer, String name, double[] values, int count); /*
+		ISteamUserStats* stats = (ISteamUserStats*) pointer;
+		return stats->GetGlobalStatHistory(name, values, count * sizeof(double));
 	*/
 
 }

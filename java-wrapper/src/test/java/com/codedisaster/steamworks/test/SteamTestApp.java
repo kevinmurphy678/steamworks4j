@@ -8,10 +8,19 @@ public abstract class SteamTestApp {
 
 	protected SteamUtils clientUtils;
 
+	protected static final int MS_PER_TICK = 1000 / 15;
+
 	private SteamAPIWarningMessageHook clMessageHook = new SteamAPIWarningMessageHook() {
 		@Override
 		public void onWarningMessage(int severity, String message) {
 			System.err.println("[client debug message] (" + severity + ") " + message);
+		}
+	};
+
+	private SteamUtilsCallback clUtilsCallback = new SteamUtilsCallback() {
+		@Override
+		public void onSteamShutdown() {
+			System.err.println("Steam client requested to shut down!");
 		}
 	};
 
@@ -68,17 +77,21 @@ public abstract class SteamTestApp {
 
 		System.out.println("Initialise Steam client API ...");
 
-		if (!SteamAPI.init("../natives/libs")) {
+		if (!SteamAPI.init("../java-wrapper/src/main/resources")) {
 			return false;
 		}
 
+		SteamAPI.printDebugInfo(System.out);
+
 		registerInterfaces();
 
-		clientUtils = new SteamUtils();
+		clientUtils = new SteamUtils(clUtilsCallback);
 		clientUtils.setWarningMessageHook(clMessageHook);
 
 		InputHandler inputHandler = new InputHandler(Thread.currentThread());
-		new Thread(inputHandler).start();
+
+		Thread inputThread = new Thread(inputHandler);
+		inputThread.start();
 
 		while (inputHandler.alive() && SteamAPI.isSteamRunning()) {
 
@@ -88,13 +101,19 @@ public abstract class SteamTestApp {
 
 			try {
 				// sleep a little (Steam says it should poll at least 15 times/second)
-				Thread.sleep(1000 / 15);
+				Thread.sleep(MS_PER_TICK);
 			} catch (InterruptedException e) {
 				// ignore
 			}
 		}
 
 		System.out.println("Shutting down Steam client API ...");
+
+		try {
+			inputThread.join();
+		} catch (InterruptedException e) {
+			throw new SteamException(e);
+		}
 
 		clientUtils.dispose();
 

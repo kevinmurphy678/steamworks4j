@@ -37,10 +37,26 @@ public class SteamUtils extends SteamInterface {
 
 	private SteamUtilsCallbackAdapter callbackAdapter;
 
-	public SteamUtils() {
+	public SteamUtils(SteamUtilsCallback callback) {
 		super(SteamAPI.getSteamUtilsPointer());
-		callbackAdapter = new SteamUtilsCallbackAdapter(new SteamUtilsCallback() {});
+		callbackAdapter = new SteamUtilsCallbackAdapter(callback);
 		setCallback(createCallback(callbackAdapter));
+	}
+
+	public int getSecondsSinceAppActive() {
+		return getSecondsSinceAppActive(pointer);
+	}
+
+	public int getSecondsSinceComputerActive() {
+		return getSecondsSinceComputerActive(pointer);
+	}
+
+	public SteamUniverse getConnectedUniverse() {
+		return SteamUniverse.byValue(getConnectedUniverse(pointer));
+	}
+
+	public int getServerRealTime() {
+		return getServerRealTime(pointer);
 	}
 
 	public int getImageWidth(int image) {
@@ -90,7 +106,33 @@ public class SteamUtils extends SteamInterface {
 	*/
 
 	static private native long createCallback(SteamUtilsCallbackAdapter javaCallback); /*
-		return (long) new SteamUtilsCallback(env, javaCallback);
+		return (intp) new SteamUtilsCallback(env, javaCallback);
+	*/
+
+	static private native int getSecondsSinceAppActive(long pointer); /*
+		ISteamUtils* utils = (ISteamUtils*) pointer;
+		return utils->GetSecondsSinceAppActive();
+	*/
+
+	static private native int getSecondsSinceComputerActive(long pointer); /*
+		ISteamUtils* utils = (ISteamUtils*) pointer;
+		return utils->GetSecondsSinceComputerActive();
+	*/
+
+	static private native int getConnectedUniverse(long pointer); /*
+		ISteamUtils* utils = (ISteamUtils*) pointer;
+		return utils->GetConnectedUniverse();
+	*/
+
+	// This will overflow in year 2038.
+	static private native int getServerRealTime(long pointer); /*
+		ISteamUtils* utils = (ISteamUtils*) pointer;
+		return utils->GetServerRealTime();
+	*/
+
+	static private native String getIPCountry(long pointer); /*
+		ISteamUtils* utils = (ISteamUtils*) pointer;
+		return env->NewStringUTF(utils->GetIPCountry());
 	*/
 
 	static private native int getImageWidth(long pointer, int image); /*

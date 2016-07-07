@@ -6,7 +6,7 @@
 
 	<groupId>com.code-disaster.steamworks4j</groupId>
 	<artifactId>steamworks4j-parent</artifactId>
-	<version>1.2.3-SNAPSHOT</version>
+	<version>1.4.1-SNAPSHOT</version>
 
 	<packaging>pom</packaging>
 
@@ -40,7 +40,6 @@
 	</scm>
 
 	<modules>
-		<module>natives</module>
 		<module>java-wrapper</module>
 		<module>jnigen</module>
 	</modules>
